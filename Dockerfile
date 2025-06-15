@@ -60,4 +60,4 @@ RUN chmod 755 /app && \
 USER nobody
 
 EXPOSE 8080
-CMD ["python3", "app.py"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "app:app"]
