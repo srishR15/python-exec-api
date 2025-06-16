@@ -52,11 +52,12 @@ RUN ls -la /usr/local/bin/python* && \
     ls -la /usr/bin/python*
 
 # Set permissions that are required
-RUN chmod 755 /app && \
+RUN mkdir -p /sandbox && \
+    chown -R nobody:nogroup /sandbox && \
+    chmod 755 /app && \
     chmod 644 /etc/nsjail/nsjail.cfg && \
-    chown -R nobody:nogroup /sandbox
+    chmod 770 /sandbox  # More secure than 777
 
-# Run as non-root user
 USER nobody
 
 EXPOSE 8080
