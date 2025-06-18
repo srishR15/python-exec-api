@@ -1,6 +1,6 @@
 FROM python:3.10-slim
 
-# dependencies
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Install nsjail
 RUN git clone https://github.com/google/nsjail.git /tmp/nsjail \
     && cd /tmp/nsjail \
     && git checkout 3.1 \
@@ -26,39 +27,25 @@ RUN git clone https://github.com/google/nsjail.git /tmp/nsjail \
     && mv nsjail /usr/local/bin/nsjail \
     && rm -rf /tmp/nsjail
 
-# Create sandbox environment here
+# Create sandbox and working directory
 RUN mkdir -p /sandbox /etc/nsjail
 WORKDIR /app
 
-# Install Python dependencies
+# Install Python packages
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application files
+# Copy app files
 COPY app.py .
 COPY nsjail.cfg /etc/nsjail/
 
-RUN ln -s $(which python3) /usr/bin/python3 && \
-    mkdir -p /sandbox && \
-    python3 -c "import sys; print(f'Python paths: {sys.path}')" && \
-    chown nobody:nogroup /sandbox
+# Set proper permissions
+RUN chmod 777 /sandbox \
+    && chmod 644 /etc/nsjail/nsjail.cfg
 
-# Verify if Python installation is done
-RUN echo "Python location: $(which python3)" && \
-    ls -la $(which python3) && \
-    ls -la /usr/bin/python3
-
-RUN ls -la /usr/local/bin/python* && \
-    ls -la /usr/bin/python*
-
-# Set permissions that are required
-RUN mkdir -p /sandbox && \
-    chown -R nobody:nogroup /sandbox && \
-    chmod 755 /app && \
-    chmod 644 /etc/nsjail/nsjail.cfg && \
-    chmod 770 /sandbox  # More secure than 777
-
+# Drop to non-root user
 USER nobody
 
 EXPOSE 8080
+
 CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --threads 8 --timeout 0 app:app"]
